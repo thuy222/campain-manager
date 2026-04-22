@@ -4,7 +4,10 @@
 
 set +e
 
-FILE_PATH="${1:-}"
+# Claude Code passes PostToolUse payload as JSON on stdin.
+# We read the file path from .tool_input.file_path.
+INPUT="$(cat)"
+FILE_PATH="$(printf "%s" "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null)"
 
 # No file path? Nothing to do.
 if [ -z "$FILE_PATH" ]; then

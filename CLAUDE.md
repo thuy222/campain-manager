@@ -62,6 +62,31 @@ Run from repo root.
 
 DTOs are Zod schemas; use `z.infer` for the type. One schema per body/query/params.
 
+## Module structure
+
+Backend code is organized by feature under `src/modules/<name>/`. One folder per domain module (`campaigns`, later `auth`, `recipients`, …). Shared bootstrap stays at `src/app.js` (express app + middleware + module mounts) and `src/index.js` (listen only).
+
+Each module contains these files, named `<name>.<role>.js`:
+
+```
+src/modules/<name>/
+├── <name>.routes.js       # express.Router(); instantiates service + controller and wires handlers
+├── <name>.controller.js   # class; methods shape req/res; depends on the service
+├── <name>.service.js      # class; business logic; throws AppError
+├── <name>.repository.js   # class; the only place that imports Sequelize Models (add when DB lands)
+├── dto/                   # Zod schemas (add when validation lands)
+└── models/                # Sequelize models (add when DB lands)
+```
+
+**Controllers and services are classes**, not bags of functions:
+
+- Service holds its dependencies (repository, other services) on `this`; controller holds its service on `this`.
+- Define controller request handlers as **arrow-function class fields** (`list = (req, res) => {...}`) so they retain `this` when passed to `router.get(...)`. Don't pass `controller.list.bind(controller)` — that's the workaround we're avoiding.
+- The routes file is the composition root: `new Service()` → `new Controller(service)` → mount on an `express.Router()`. No DI framework.
+- One instance per process (module-scope `new`). If a module needs shared state across routes files, export the instance from the module, not the class.
+
+Route file is the only place that knows wiring; `app.js` only sees the router.
+
 ## Project anti-patterns (on top of `common-rules.md`)
 
 - ❌ `sequelize.sync()` — anywhere, including tests. Migrations only.

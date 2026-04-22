@@ -82,7 +82,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./.claude/hooks/auto-format.sh \"$CLAUDE_FILE_PATH\"",
+            "command": "./.claude/hooks/auto-format.sh",
             "timeout": 30
           }
         ]
