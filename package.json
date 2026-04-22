@@ -1,0 +1,23 @@
+{
+  "name": "campaign-manager",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mini Campaign Manager — full-stack monorepo (Express + React 18)",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c blue,magenta \"yarn workspace @campaign-manager/backend dev\" \"yarn workspace @campaign-manager/frontend dev\"",
+    "dev:backend": "yarn workspace @campaign-manager/backend dev",
+    "dev:frontend": "yarn workspace @campaign-manager/frontend dev",
+    "build": "yarn workspaces run build",
+    "start": "yarn workspace @campaign-manager/backend start",
+    "clean": "rm -rf node_modules packages/*/node_modules packages/*/dist packages/*/build"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
