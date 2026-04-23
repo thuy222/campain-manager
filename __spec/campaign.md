@@ -9,7 +9,7 @@ A campaign is the core object in this app: an email message (name, subject, body
 
 This spec covers the full lifecycle in one place: creating a campaign, listing / viewing / editing / deleting drafts, scheduling a draft for a future moment, sending a campaign (synchronous, one request), and reading delivery stats.
 
-The per-recipient side — who got what, when they opened it, replacing a draft's recipient list — is a separate feature (`recipients`). This spec refers to recipient *counts* and *aggregate* stats but does not cover the detail list.
+The per-recipient delivery side — who specifically received, failed, or opened each email (per-recipient `sent_at`, `opened_at`, `status`), plus a recipient-focused entry point for list changes — is a separate feature (`recipients`). This spec covers recipient _counts_, _aggregate_ stats, full recipient-list replacement on drafts, and returning the flat list of recipient emails on the detail endpoint; it does not cover per-recipient delivery records.
 
 ## Who
 
@@ -87,7 +87,7 @@ Reading stats never modifies anything.
 3. The same recipient email used across two campaigns shares one recipient record rather than being duplicated.
 4. An owner can list their own campaigns, newest first, in pages they control, optionally filtered by status.
 5. Each list entry includes a recipient count.
-6. An owner can open any one of their own campaigns and see its full details plus recipient count.
+6. An owner can open any one of their own campaigns and see its full details, recipient count, and the flat list of recipient emails.
 7. Attempts to open a non-existent campaign and attempts to open another user's campaign produce the identical "not found" response.
 
 ### Edit / delete (draft only)
@@ -144,7 +144,7 @@ Reading stats never modifies anything.
 
 ## Out of scope
 
-- Editing or replacing a campaign's recipient list, and reading per-recipient delivery state (see the `recipients` spec).
+- Reading per-recipient delivery state as a detail list — who received, failed, or opened each email — and the recipient-focused entry point for list changes (see the `recipients` spec).
 - Campaign duplication, templates, bulk operations, free-text search, alternate sort orders, soft delete / undo.
 - Un-scheduling, re-scheduling, recurring schedules.
 - Automatic dispatch at the scheduled moment — the scheduled state is informational; a human still presses send.

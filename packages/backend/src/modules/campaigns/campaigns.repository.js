@@ -28,14 +28,18 @@ class CampaignsRepository {
     const [row] = await sequelize.query(
       `SELECT c.id, c.name, c.subject, c.body, c.status, c.scheduled_at,
               c.created_by, c.created_at, c.updated_at,
-              COALESCE(rc.cnt, 0) AS recipient_count
+              COALESCE(rl.cnt,    0)              AS recipient_count,
+              COALESCE(rl.emails, ARRAY[]::text[]) AS recipients
          FROM campaigns c
     LEFT JOIN (
-           SELECT campaign_id, COUNT(*)::int AS cnt
-             FROM campaign_recipients
-            WHERE campaign_id = :id
-            GROUP BY campaign_id
-         ) rc ON rc.campaign_id = c.id
+           SELECT cr.campaign_id,
+                  COUNT(*)::int                        AS cnt,
+                  ARRAY_AGG(r.email ORDER BY r.email)  AS emails
+             FROM campaign_recipients cr
+             JOIN recipients r ON r.id = cr.recipient_id
+            WHERE cr.campaign_id = :id
+            GROUP BY cr.campaign_id
+         ) rl ON rl.campaign_id = c.id
         WHERE c.id = :id
           AND c.created_by = :createdBy`,
       {
@@ -45,7 +49,11 @@ class CampaignsRepository {
       },
     );
     if (!row) return null;
-    return { ...row, recipient_count: Number(row.recipient_count) };
+    return {
+      ...row,
+      recipient_count: Number(row.recipient_count),
+      recipients: row.recipients || [],
+    };
   }
 
   async findByOwner({ createdBy, status, limit, offset }, tx) {

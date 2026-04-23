@@ -11,6 +11,7 @@ export type Campaign = {
   created_at: string;
   updated_at: string;
   recipient_count: number;
+  recipients?: string[];
 };
 
 export type CampaignStats = {

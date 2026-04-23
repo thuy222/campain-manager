@@ -1,7 +1,7 @@
 const request = require("supertest");
 
 const app = require("../src/app");
-const { sequelize, Recipient } = require("../src/db/models");
+const { sequelize, Recipient, CampaignRecipient } = require("../src/db/models");
 const { SESSION_COOKIE } = require("../src/lib/cookies");
 
 const USER_A = {
@@ -55,11 +55,7 @@ describe("POST /api/campaigns (create)", () => {
       .set("Cookie", cookie)
       .send(
         makeCampaignPayload({
-          recipients: [
-            "first@example.com",
-            " First@Example.com ",
-            "SECOND@example.com",
-          ],
+          recipients: ["first@example.com", " First@Example.com ", "SECOND@example.com"],
         }),
       );
 
@@ -120,9 +116,7 @@ describe("POST /api/campaigns (create)", () => {
   });
 
   test("requires authentication", async () => {
-    const res = await request(app)
-      .post("/api/campaigns")
-      .send(makeCampaignPayload());
+    const res = await request(app).post("/api/campaigns").send(makeCampaignPayload());
     expect(res.status).toBe(401);
   });
 });
@@ -137,9 +131,7 @@ describe("GET /api/campaigns (list)", () => {
         .send(makeCampaignPayload({ name }));
     }
 
-    const res = await request(app)
-      .get("/api/campaigns?page=1&limit=2")
-      .set("Cookie", cookie);
+    const res = await request(app).get("/api/campaigns?page=1&limit=2").set("Cookie", cookie);
 
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveLength(2);
@@ -183,6 +175,10 @@ describe("GET /api/campaigns/:id", () => {
         recipient_count: 2,
       }),
     );
+    expect(res.body.data.recipients).toEqual(
+      expect.arrayContaining(["alice@example.com", "bob@example.com"]),
+    );
+    expect(res.body.data.recipients).toHaveLength(2);
   });
 
   test("non-existent id and another user's id return identical 404", async () => {
@@ -194,9 +190,7 @@ describe("GET /api/campaigns/:id", () => {
       .send(makeCampaignPayload());
 
     const fake = "11111111-1111-1111-1111-111111111111";
-    const missing = await request(app)
-      .get(`/api/campaigns/${fake}`)
-      .set("Cookie", b.cookie);
+    const missing = await request(app).get(`/api/campaigns/${fake}`).set("Cookie", b.cookie);
     const someoneElse = await request(app)
       .get(`/api/campaigns/${created.body.data.id}`)
       .set("Cookie", b.cookie);
@@ -236,11 +230,7 @@ describe("PATCH /api/campaigns/:id", () => {
       .patch(`/api/campaigns/${created.body.data.id}`)
       .set("Cookie", cookie)
       .send({
-        recipients: [
-          "NEW@Example.com",
-          "new@example.com",
-          "another@example.com",
-        ],
+        recipients: ["NEW@Example.com", "new@example.com", "another@example.com"],
       });
 
     expect(res.status).toBe(200);
@@ -312,9 +302,7 @@ describe("DELETE /api/campaigns/:id", () => {
       .send(makeCampaignPayload());
     const id = created.body.data.id;
 
-    const res = await request(app)
-      .delete(`/api/campaigns/${id}`)
-      .set("Cookie", cookie);
+    const res = await request(app).delete(`/api/campaigns/${id}`).set("Cookie", cookie);
     expect(res.status).toBe(204);
 
     // Recipient row still exists (shared resource).
@@ -323,9 +311,7 @@ describe("DELETE /api/campaigns/:id", () => {
     });
     expect(recipient).not.toBeNull();
 
-    const after = await request(app)
-      .get(`/api/campaigns/${id}`)
-      .set("Cookie", cookie);
+    const after = await request(app).get(`/api/campaigns/${id}`).set("Cookie", cookie);
     expect(after.status).toBe(404);
   });
 
@@ -343,9 +329,7 @@ describe("DELETE /api/campaigns/:id", () => {
       .set("Cookie", cookie)
       .send({ scheduled_at: future });
 
-    const res = await request(app)
-      .delete(`/api/campaigns/${id}`)
-      .set("Cookie", cookie);
+    const res = await request(app).delete(`/api/campaigns/${id}`).set("Cookie", cookie);
     expect(res.status).toBe(409);
   });
 });
@@ -434,15 +418,11 @@ describe("POST /api/campaigns/:id/send + GET /api/campaigns/:id/stats", () => {
       .send(makeCampaignPayload({ recipients: ["a@x.com", "b@x.com", "c@x.com"] }));
     const id = created.body.data.id;
 
-    const send = await request(app)
-      .post(`/api/campaigns/${id}/send`)
-      .set("Cookie", cookie);
+    const send = await request(app).post(`/api/campaigns/${id}/send`).set("Cookie", cookie);
     expect(send.status).toBe(200);
     expect(send.body.data.status).toBe("sent");
 
-    const stats = await request(app)
-      .get(`/api/campaigns/${id}/stats`)
-      .set("Cookie", cookie);
+    const stats = await request(app).get(`/api/campaigns/${id}/stats`).set("Cookie", cookie);
     expect(stats.status).toBe(200);
     expect(Object.keys(stats.body.data)).toEqual([
       "total",
@@ -471,9 +451,7 @@ describe("POST /api/campaigns/:id/send + GET /api/campaigns/:id/stats", () => {
     const id = created.body.data.id;
 
     await request(app).post(`/api/campaigns/${id}/send`).set("Cookie", cookie);
-    const second = await request(app)
-      .post(`/api/campaigns/${id}/send`)
-      .set("Cookie", cookie);
+    const second = await request(app).post(`/api/campaigns/${id}/send`).set("Cookie", cookie);
     expect(second.status).toBe(409);
   });
 
@@ -517,5 +495,59 @@ describe("POST /api/campaigns/:id/send + GET /api/campaigns/:id/stats", () => {
     expect(someoneElse.status).toBe(404);
     expect(ghost.status).toBe(404);
     expect(someoneElse.body).toEqual(ghost.body);
+  });
+
+  test("scheduled campaign can transition directly to sent", async () => {
+    const { cookie } = await registerUser(USER_A);
+    const created = await request(app)
+      .post("/api/campaigns")
+      .set("Cookie", cookie)
+      .send(makeCampaignPayload({ recipients: ["a@x.com", "b@x.com"] }));
+    const id = created.body.data.id;
+
+    const future = new Date(Date.now() + 3600 * 1000).toISOString();
+    const scheduled = await request(app)
+      .post(`/api/campaigns/${id}/schedule`)
+      .set("Cookie", cookie)
+      .send({ scheduled_at: future });
+    expect(scheduled.status).toBe(200);
+    expect(scheduled.body.data.status).toBe("scheduled");
+
+    const send = await request(app).post(`/api/campaigns/${id}/send`).set("Cookie", cookie);
+    expect(send.status).toBe(200);
+    expect(send.body.data.status).toBe("sent");
+
+    const stats = await request(app).get(`/api/campaigns/${id}/stats`).set("Cookie", cookie);
+    expect(stats.body.data).toEqual({
+      total: 2,
+      sent: 2,
+      failed: 0,
+      opened: 0,
+      open_rate: 0,
+      send_rate: 1,
+    });
+  });
+
+  test("send on a campaign with zero recipients is rejected", async () => {
+    const { cookie } = await registerUser(USER_A);
+    const created = await request(app)
+      .post("/api/campaigns")
+      .set("Cookie", cookie)
+      .send(makeCampaignPayload({ recipients: ["lonely@example.com"] }));
+    const id = created.body.data.id;
+
+    // DTO requires ≥1 recipient on create and update, so to reach the
+    // service-level guard we wipe the join rows directly.
+    await CampaignRecipient.destroy({ where: { campaign_id: id } });
+
+    const res = await request(app).post(`/api/campaigns/${id}/send`).set("Cookie", cookie);
+
+    expect(res.status).toBe(422);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    expect(res.body.error.details.recipients).toMatch(/at least one/i);
+
+    // Guard leaves the campaign untouched — still a draft.
+    const after = await request(app).get(`/api/campaigns/${id}`).set("Cookie", cookie);
+    expect(after.body.data.status).toBe("draft");
   });
 });

@@ -1,11 +1,3 @@
-# Common Rules
-
-Project-agnostic behavioral and coding conventions. `CLAUDE.md` references this file and adds project-specific rules on top. Everything here applies regardless of language or framework unless a project rule explicitly overrides it.
-
-**Tradeoff:** these rules bias toward caution, simplicity, and traceability over speed. For truly trivial tasks use judgment, but the default is to follow them.
-
----
-
 ## Part A — Behavioral
 
 ### 1. Think before coding
@@ -117,18 +109,3 @@ Don't explain what the code does — well-named identifiers already do that. Don
 - ❌ `any`-typed escape hatches.
 - ❌ Catch-all `try { ... } catch { /* ignore */ }`.
 - ❌ Swallowed promise rejections.
-
----
-
-## Part C — Working with Claude Code (workflow defaults)
-
-- **Read the project's `CLAUDE.md` and any `__spec/` file before coding.** If a spec is missing for non-trivial work, draft one first and stop for confirmation.
-- **Short user-facing updates, not monologues.** State what you're about to do before the first tool call; flag finds, direction changes, and blockers. Silent is worse than brief.
-- **Don't narrate deliberation.** Write results, not running commentary.
-- **Match response size to the question.** A one-line question gets a one-line answer; no headers, no sections.
-- **Ask before destructive or shared-state actions** (force push, DB drops, deletes, sending messages, publishing to third-party tools). Authorization for one action does not extend to others.
-- **Match the existing code style.** If the project uses tabs, use tabs. If it uses single quotes, use single quotes. Consistency > preference.
-
----
-
-**These rules are working if:** diffs are small and traceable, questions come before implementation instead of after mistakes, and rewrites from overcomplication become rare.

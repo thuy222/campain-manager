@@ -100,8 +100,18 @@ export default function CampaignDetailPage() {
             <dd>{campaign.subject}</dd>
             <dt>Body</dt>
             <dd className="body-preview">{campaign.body}</dd>
-            <dt>Recipients</dt>
-            <dd>{campaign.recipient_count}</dd>
+            <dt>Recipients ({campaign.recipient_count})</dt>
+            <dd>
+              {campaign.recipients && campaign.recipients.length > 0 ? (
+                <ul className="recipient-list">
+                  {campaign.recipients.map((email) => (
+                    <li key={email}>{email}</li>
+                  ))}
+                </ul>
+              ) : (
+                <span className="muted">No recipients</span>
+              )}
+            </dd>
             {campaign.scheduled_at && (
               <>
                 <dt>Scheduled</dt>

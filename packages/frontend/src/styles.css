@@ -287,6 +287,19 @@ th {
   margin: 0;
 }
 
+.recipient-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  max-height: 12rem;
+  overflow-y: auto;
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+.recipient-list li {
+  line-height: 1.4;
+}
+
 .body-preview {
   white-space: pre-wrap;
 }

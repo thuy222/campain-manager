@@ -65,8 +65,8 @@ class CampaignsService {
   async get(ownerId, id) {
     const row = await this.repository.findByIdWithRecipientCount(id, ownerId);
     if (!row) throw notFound();
-    const { recipient_count, ...rest } = row;
-    return this.toPublic(rest, { recipient_count });
+    const { recipient_count, recipients, ...rest } = row;
+    return this.toPublic(rest, { recipient_count, recipients });
   }
 
   async updateDraft(ownerId, id, patch) {
