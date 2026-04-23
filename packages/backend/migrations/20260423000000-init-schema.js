@@ -5,6 +5,39 @@ module.exports = {
     const transaction = await queryInterface.sequelize.transaction();
     try {
       await queryInterface.createTable(
+        "users",
+        {
+          id: {
+            type: Sequelize.UUID,
+            defaultValue: Sequelize.literal("gen_random_uuid()"),
+            allowNull: false,
+            primaryKey: true,
+          },
+          email: { type: Sequelize.STRING(255), allowNull: false },
+          name: { type: Sequelize.STRING(255), allowNull: false },
+          password_hash: { type: Sequelize.STRING(255), allowNull: false },
+          created_at: {
+            type: Sequelize.DATE,
+            allowNull: false,
+            defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
+          },
+          updated_at: {
+            type: Sequelize.DATE,
+            allowNull: false,
+            defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
+          },
+        },
+        { transaction },
+      );
+
+      await queryInterface.addIndex("users", {
+        name: "users_email_unique",
+        fields: ["email"],
+        unique: true,
+        transaction,
+      });
+
+      await queryInterface.createTable(
         "campaigns",
         {
           id: {
@@ -60,6 +93,14 @@ module.exports = {
         fields: ["created_by", "status"],
         transaction,
       });
+
+      // Partial index: only scheduled rows carry a meaningful scheduled_at, and
+      // any future dispatcher will filter on that exact predicate.
+      await queryInterface.sequelize.query(
+        "CREATE INDEX campaigns_scheduled_at_idx ON campaigns (scheduled_at) " +
+          "WHERE status = 'scheduled'",
+        { transaction },
+      );
 
       await queryInterface.createTable(
         "recipients",
@@ -151,6 +192,7 @@ module.exports = {
       await queryInterface.dropTable("campaign_recipients", { transaction });
       await queryInterface.dropTable("recipients", { transaction });
       await queryInterface.dropTable("campaigns", { transaction });
+      await queryInterface.dropTable("users", { transaction });
       await transaction.commit();
     } catch (err) {
       await transaction.rollback();
