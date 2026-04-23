@@ -69,25 +69,6 @@ Created by `yarn workspace @campaign-manager/backend db:seed`:
 
 You can also register a new account from the `/register` page — registration does not require an invite.
 
-## Common commands
-
-| Task                  | Command                                                                            |
-| --------------------- | ---------------------------------------------------------------------------------- |
-| Backend tests         | `yarn workspace @campaign-manager/backend test`                                    |
-| Frontend tests        | `yarn workspace @campaign-manager/frontend test`                                   |
-| Frontend typecheck    | `yarn workspace @campaign-manager/frontend typecheck`                              |
-| DB migrate / rollback | `yarn workspace @campaign-manager/backend db:migrate` / `db:rollback`              |
-| DB seed / unseed      | `yarn workspace @campaign-manager/backend db:seed` / `db:seed:undo`                |
-| psql into the dev DB  | `docker exec -it campaign-manager-postgres-1 psql -U postgres -d campaign_manager` |
-| Format                | `yarn prettier --write <path>`                                                     |
-
-## Project conventions
-
-- Routes → controller → service → repository. Only repositories import Sequelize models.
-- Responses use a single envelope: `{ data: ... }` for success, `{ error: { code, message, details? } }` for errors.
-- Sessions: 24-hour JWT in an httpOnly cookie, silently extended on every authenticated request.
-- Specs live under `__spec/<feature>.md` and ship with the code.
-
 ## How I Used Claude Code
 
 ### Setup philosophy
@@ -155,6 +136,5 @@ The most valuable thing Claude Code gave me wasn't speed — it was **enforced c
 - The spec-first workflow forced me to _think through edge cases upfront_ instead of discovering them via bugs. The resolved-question blocks at the bottom of each spec capture decisions that would otherwise get lost.
 - The habit of asking Claude to audit shipped code against the original assignment brief at checkpoints catches drift that neither code review nor tests can catch — specifically, "is the README still true?" and "does our shipped surface match what the assignment asked for?"
 
-## What I'm still not satisfied with: the RegisterPage validation bug should have been caught before I shipped — the test that would have caught it is trivial (`empty submit does not call fetch`), and I wrote exactly that test for `CampaignNewPage`. The gap was I didn't ask for parallel tests across the auth pages. Next time I'll treat "all user-input forms have a client-validation-blocks-fetch test" as a checklist item, not a per-file judgment call.
 
 See [`CLAUDE.md`](./CLAUDE.md) for the full contributor guide and [`__spec/auth.md`](./__spec/auth.md) for the auth feature spec.
