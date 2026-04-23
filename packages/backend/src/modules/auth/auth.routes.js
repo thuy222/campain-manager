@@ -22,4 +22,7 @@ router.post("/logout", controller.logout);
 router.get("/me", requireAuth, controller.me);
 router.post("/refresh", requireAuth, controller.refresh);
 
+// Repository singleton is exposed so sibling modules (e.g. campaigns) can reuse
+// the same instance when building their own requireAuth middleware.
 module.exports = router;
+module.exports.authRepository = repository;

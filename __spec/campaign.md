@@ -1,13 +1,13 @@
 # Campaign
 
-**Status:** ready · **Owner:** TH · **Date:** 2026-04-22
+**Status:** ready · **Owner:** TH · **Date:** 2026-04-23
 **Depends on:** auth
 
 ## What
 
-A campaign is the core object in this app: an email message (name, subject, body) targeted at a list of recipients, with a lifecycle that takes it from an editable draft, optionally through a "scheduled for later" state, through an active "sending" state, to a frozen "sent" state where only stats can be read.
+A campaign is the core object in this app: an email message (name, subject, body) targeted at a list of recipients, with a lifecycle that takes it from an editable draft, optionally through a "scheduled for later" state, to a frozen "sent" state where only stats can be read.
 
-This spec covers the full lifecycle in one place: creating a campaign, listing / viewing / editing / deleting drafts, scheduling a draft for a future moment, sending a campaign (as a background job), and reading delivery stats.
+This spec covers the full lifecycle in one place: creating a campaign, listing / viewing / editing / deleting drafts, scheduling a draft for a future moment, sending a campaign (synchronous, one request), and reading delivery stats.
 
 The per-recipient side — who got what, when they opened it, replacing a draft's recipient list — is a separate feature (`recipients`). This spec refers to recipient *counts* and *aggregate* stats but does not cover the detail list.
 
@@ -17,14 +17,13 @@ A signed-in user. Every campaign is owned by exactly one user — the one who cr
 
 ## Lifecycle at a glance
 
-A campaign sits in exactly one of four states:
+A campaign sits in exactly one of three states:
 
 - **draft** — freshly created, fully editable, deletable.
 - **scheduled** — pinned to a future moment; read-only within this spec (no edit, no delete, no re-schedule).
-- **sending** — work in progress; the system is processing recipients in the background.
 - **sent** — frozen; cannot be edited, re-sent, or moved back. Stats remain readable forever.
 
-The only allowed transitions are: `draft → scheduled`, `draft → sending`, `scheduled → sending`, and `sending → sent`. Every other transition is rejected — no back-edges, no jumps past `sending`.
+The only allowed transitions are: `draft → scheduled`, `draft → sent`, and `scheduled → sent`. Every other transition is rejected — no back-edges.
 
 ## Behavior
 
@@ -52,19 +51,15 @@ Server time is authoritative. A moment the client picked that looked "future" bu
 
 Scheduling only marks the campaign — it does not actually deliver. Sending is a separate, explicit action. Re-scheduling or un-scheduling an already-scheduled campaign is not supported within this spec; the user deletes and creates a new one.
 
-### Sending (async)
+### Sending
 
 The owner presses send. The system checks that the campaign is a draft or scheduled, belongs to the caller, and has at least one recipient. If any check fails, the attempt is rejected with a specific message; the campaign is left untouched.
 
-If the checks pass, the system immediately moves the campaign to "sending" and acknowledges the request. The user does not wait for every recipient to be processed — that would freeze the UI on large lists. The response is "received", not "done".
+If the checks pass, the system walks through each recipient within the same request: it records whether the simulated delivery succeeded or failed and the moment it happened, then flips the campaign's status to `sent` before responding. A configurable proportion of recipients can be simulated as failures, and a configurable proportion of successfully-delivered recipients can be marked as having opened the email. With both knobs at zero (the default), every recipient is marked sent and none are opened.
 
-Behind the scenes, a worker walks through each recipient and records whether the simulated delivery succeeded or failed along with the moment it happened. A configurable proportion of recipients can be simulated as failures, and a configurable proportion of successfully-delivered recipients can be marked as having opened the email. With both knobs at zero (the default), every recipient is marked sent and none are opened.
+Once the send completes the response carries the updated campaign; the campaign is now frozen.
 
-When all recipients have been processed, the campaign transitions from sending to sent. Once sent, the campaign is frozen.
-
-If the server is killed mid-send and some campaigns are stuck in "sending", the system resumes on the next boot: it finds stuck campaigns, finishes their still-pending recipients, and settles them to sent. Already-processed recipients are not re-processed, so this is safe.
-
-Pressing send on a campaign that is already sending, or already sent, is rejected with a clear state message.
+Pressing send on an already-sent campaign is rejected with a clear state message.
 
 ### Stats
 
@@ -79,7 +74,7 @@ At any point in a campaign's life — even for a brand-new draft that has never 
 
 Rates are fractions in the closed interval from zero to one, rounded to four decimal places. When the base of a rate would be zero (open rate when nothing has been sent, or send rate when total is zero), the rate is zero — not missing, not an error. The shape is stable across all campaign states; the UI never has to branch for "stats-not-ready".
 
-Stats during an active send reflect current partial progress, not a frozen snapshot. Successive reads can return different numbers. Stats on another user's campaign look exactly like stats on a non-existent one — ownership is always hidden.
+Stats on another user's campaign look exactly like stats on a non-existent one — ownership is always hidden.
 
 Reading stats never modifies anything.
 
@@ -110,30 +105,26 @@ Reading stats never modifies anything.
 15. If any scheduling precondition fails, the campaign's state is left exactly as it was, and the failure message names the precondition.
 16. Scheduling a non-draft, or re-scheduling an already-scheduled campaign, is rejected.
 
-### Send (async)
+### Send
 
 17. An owner can send their own draft or scheduled campaign.
-18. Pressing send produces an immediate acknowledgement with the campaign in the "sending" state — the user does not wait for delivery to finish.
-19. Actual per-recipient processing happens in the background.
-20. When every recipient has been processed, the campaign transitions to "sent".
-21. A sent campaign cannot be edited, deleted, scheduled, or re-sent.
-22. Sending a campaign that is already sending or already sent is rejected.
-23. Sending a campaign with zero recipients is rejected.
-24. Two simultaneous send attempts on the same campaign cannot both succeed.
-25. If the server is restarted while a campaign is in the middle of sending, processing resumes automatically without duplicating work for already-processed recipients.
-26. Simulated failure rate and simulated open rate are system-level configurable; both default to zero.
+18. Pressing send returns the updated campaign in the `sent` state in one response — per-recipient processing completes before the response is sent.
+19. A sent campaign cannot be edited, deleted, scheduled, or re-sent.
+20. Sending a campaign that is already sent is rejected.
+21. Sending a campaign with zero recipients is rejected.
+22. Two simultaneous send attempts on the same campaign cannot both succeed.
+23. Simulated failure rate and simulated open rate are system-level configurable; both default to zero.
 
 ### Stats
 
-27. An owner can read stats on any of their own campaigns in any state; the response always contains the same six fields.
-28. Rates are fractions in the closed interval from zero to one, rounded to four decimals.
-29. When the base of a rate is zero, the rate is reported as zero rather than missing or as an error.
-30. Stats read during an active send reflect current partial progress.
-31. Reading stats never modifies state.
+24. An owner can read stats on any of their own campaigns in any state; the response always contains the same six fields.
+25. Rates are fractions in the closed interval from zero to one, rounded to four decimals.
+26. When the base of a rate is zero, the rate is reported as zero rather than missing or as an error.
+27. Reading stats never modifies state.
 
 ### Ownership (applies to every action above)
 
-32. All reads and writes act only on campaigns owned by the caller. Cross-user access is indistinguishable from access to a non-existent campaign — the system never reveals the existence of someone else's campaign.
+28. All reads and writes act only on campaigns owned by the caller. Cross-user access is indistinguishable from access to a non-existent campaign — the system never reveals the existence of someone else's campaign.
 
 ## Edge cases
 
@@ -146,10 +137,8 @@ Reading stats never modifies anything.
 - The user picks a scheduled moment of exactly "now" — rejected; "strictly future" is the rule.
 - The user picks a scheduled moment seconds ahead, but network delay makes it "past" by the time the request lands — rejected on server time.
 - The user picks a time without an unambiguous timezone — rejected as ambiguous.
-- The user presses send and immediately presses send again — the second is rejected as already-sending.
-- The server is killed halfway through a send — on restart, the worker finishes pending recipients; already-processed recipients are untouched; the campaign eventually reaches sent.
+- The user presses send and immediately presses send again — the second is rejected as already-sent.
 - Simulated failure rate is set to 100% — every recipient is marked failed; the campaign still reaches sent (done, not necessarily successful).
-- Stats are requested during an active send — the numbers move between successive reads; this is expected.
 - Every recipient of a sent campaign failed — sent is zero, failed equals total, both rates are zero (no divide-by-zero).
 - The user attempts any action on a campaign by guessing someone else's id — the response is identical to attempting the action on a campaign that never existed.
 
@@ -160,9 +149,7 @@ Reading stats never modifies anything.
 - Un-scheduling, re-scheduling, recurring schedules.
 - Automatic dispatch at the scheduled moment — the scheduled state is informational; a human still presses send.
 - Real email delivery (no SMTP, no third-party provider).
-- Durable, multi-process work queue.
 - Per-recipient retry after failure, resending to a subset.
-- Cancelling an in-flight send.
 - Real open tracking via pixels or tracking links — opens are simulated.
 - Aggregated / cross-campaign dashboards, time-series breakdowns.
 - Stats caching / materialization.
@@ -172,6 +159,6 @@ Reading stats never modifies anything.
 - [x] Hard cap on recipient list length at create time. **→ 100. Large enough for demo, small enough to reject accidental paste of huge lists.**
 - [x] Should edit be able to touch the recipient list, or does that belong entirely to the recipients spec? **→ Both. The campaign edit accepts an optional new recipient list (same normalization rules as create); the recipients feature also exposes a dedicated entry point for recipient-focused UX. Both act on drafts only.**
 - [x] Default simulated failure and open rates — both zero (cleanest) versus small non-zero values that give the stats page something interesting out-of-the-box. **→ Both zero by default. The seed script sets demo-friendly values so the UI looks alive after seeding; production and test runs start clean.**
-- [x] Should the user be able to see per-recipient progress during a send, or is a whole-campaign "sending" badge enough? **→ Whole-campaign badge here. Per-recipient detail lives in the recipients feature, reachable from the same page.**
+- [x] Synchronous vs. async send. **→ Synchronous, per requirements.md: one request marks every recipient and flips the campaign to `sent`. No intermediate `sending` state, no background worker, no boot-resume. Per-recipient detail is the `recipients` feature's concern.**
 - [x] Should a scheduled campaign reaching its moment auto-dispatch, or always wait for the user? **→ Always wait. The scheduled state is informational; the owner presses send. Auto-dispatch is not required by the challenge and adds a worker we don't otherwise need.**
 - [x] Rate rounding — four decimals here is ample for any UI, but should the system round later rather than here to preserve precision for downstream consumers? **→ Round here to four decimals. No downstream consumers planned at this scope.**

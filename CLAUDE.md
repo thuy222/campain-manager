@@ -10,14 +10,13 @@ Full-stack Mini Campaign Manager. Marketers create email campaigns, schedule the
    - `sequelize-patterns` — model/repo/migration/transaction/index/aggregation rules.
    - `api-response-shape` — envelopes, HTTP status matrix, error codes, `AppError`, `asyncHandler`, never-leak rules.
 
-Source-of-truth order: this file > `__spec/<feature>.md` > code. If the spec disagrees with this file, update the spec.
 
 ## Stack
 
 Monorepo — Yarn workspaces, two packages.
 
 - `packages/backend` — Node 18+, Express, Sequelize over PostgreSQL, Zod validation, JWT in an httpOnly cookie, Jest + supertest.
-- `packages/frontend` — React 18 + TypeScript, Vite, React Query (server state), Zustand (client state), Vitest.
+- `packages/frontend` — React 18 + TypeScript, Vite, React Query (server state), Redux Toolkit + react-redux (client state), Vitest.
 
 Postgres runs locally via Docker.
 
@@ -39,18 +38,6 @@ Run from repo root.
 | DB migrate / rollback | `yarn workspace @campaign-manager/backend db:migrate` / `db:rollback` |
 | psql | `psql postgresql://postgres:postgres@localhost:5432/campaign_manager` |
 
-## Domain rules (enforce server-side, always)
-
-1. **Editable only when `status = 'draft'`.** `PATCH` / `DELETE /campaigns/:id` on any other state → **409 `STATE_CONFLICT`**.
-2. **`scheduled_at` must be strictly in the future** at request time. Past/now → **422 `VALIDATION_ERROR`**.
-3. **Sending is one-way and async.** `POST /campaigns/:id/send` transitions `draft|scheduled → sending` synchronously, enqueues dispatch, returns **202 Accepted** with the updated campaign. The worker completes `sending → sent`. `sent → *` is impossible.
-4. **State machine:** `draft → scheduled → sending → sent`, plus `draft → sending → sent` (direct send). Nothing else.
-5. **Ownership:** users only read/mutate campaigns where `created_by = req.user.id`. Anything else → **404 `NOT_FOUND`** (never leak existence via 403).
-6. **Stats shape — exact keys, always all 6:**
-   ```json
-   { "total": 0, "sent": 0, "failed": 0, "opened": 0, "open_rate": 0, "send_rate": 0 }
-   ```
-   Rates are decimals in `[0, 1]` rounded to 4 places. `open_rate = opened / sent` (0 when `sent = 0`). `send_rate = sent / total` (0 when `total = 0`).
 
 ## Project layering
 
@@ -97,19 +84,3 @@ Route file is the only place that knows wiring; `app.js` only sees the router.
 - ❌ Returning a partial stats shape — always all 6 keys.
 - ❌ JWT in `localStorage`. httpOnly cookie only.
 - ❌ Top-level response shapes other than `{ data, meta? }` or `{ error: { code, message, details? } }`.
-
-## Workflow
-
-1. Read the relevant `__spec/<feature>.md` (or generate one with `/spec <feature>` and wait for confirmation).
-2. Log the prompt to `__prompts/session-log.md` — this feeds the README "How I Used Claude Code" section.
-3. Implement following `common-rules.md` + the two auto-invoke skills.
-4. **Module checkpoints, not per-edit reviews.** When a module (e.g., campaign CRUD) is wired end-to-end with tests, run the `code-reviewer` agent.
-5. **Spec files are part of the deliverable.** `__spec/<feature>.md` is tracked in git and pushed to GitHub — commit the spec in the same PR as the feature it describes (or in a preceding spec-only PR). Never gitignore `__spec/`. If the spec changed during implementation, update it before merging — the merged spec is the source of truth for reviewers.
-
-## Suggested implementation order
-
-`auth → campaign → recipients`
-
-## Out of scope
-
-No real SMTP. No cron/worker infra beyond an in-process queue. No multi-tenant org model. No email templating language. No metrics/tracing beyond request logging.

@@ -20,10 +20,7 @@ export class ApiError extends Error {
 
 type ApiInit = Omit<RequestInit, "body"> & { body?: unknown };
 
-export async function api<T = unknown>(
-  path: string,
-  init: ApiInit = {},
-): Promise<T> {
+async function request(path: string, init: ApiInit) {
   const { body, headers, ...rest } = init;
   const res = await fetch(`/api${path}`, {
     ...rest,
@@ -35,9 +32,7 @@ export async function api<T = unknown>(
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 
-  if (res.status === 204) {
-    return undefined as T;
-  }
+  if (res.status === 204) return { res, json: undefined };
 
   let json: unknown;
   try {
@@ -55,5 +50,29 @@ export async function api<T = unknown>(
     throw new ApiError(res.status, errorBody);
   }
 
+  return { res, json };
+}
+
+/**
+ * Unwraps the standard `{ data }` envelope.
+ */
+export async function api<T = unknown>(
+  path: string,
+  init: ApiInit = {},
+): Promise<T> {
+  const { json, res } = await request(path, init);
+  if (res.status === 204) return undefined as T;
   return (json as { data: T }).data;
+}
+
+/**
+ * Returns the full response body, so callers can read `{ data, meta }` for
+ * paginated endpoints.
+ */
+export async function apiWithMeta<T, M = Record<string, unknown>>(
+  path: string,
+  init: ApiInit = {},
+): Promise<{ data: T; meta: M }> {
+  const { json } = await request(path, init);
+  return json as { data: T; meta: M };
 }

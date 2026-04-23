@@ -1,16 +1,20 @@
-import { Outlet } from "react-router-dom";
+import { Link, Outlet } from "react-router-dom";
 
 import { useLogout } from "../hooks/useAuth";
-import { useAuthStore } from "../stores/auth";
+import { useAppSelector } from "../store";
 
 export default function Layout() {
-  const user = useAuthStore((s) => s.user);
+  const user = useAppSelector((s) => s.auth.user);
   const logout = useLogout();
 
   return (
     <div className="layout">
       <header className="navbar">
-        <div className="navbar-brand">Campaign Manager</div>
+        <div className="navbar-brand">
+          <Link to="/campaigns" className="navbar-link">
+            Campaign Manager
+          </Link>
+        </div>
         <div className="navbar-user">
           {user && <span className="navbar-name">{user.name}</span>}
           <button
