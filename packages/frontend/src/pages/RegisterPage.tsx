@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { ZodError } from "zod";
 
+import ErrorAlert from "../components/ErrorAlert";
 import { useRegister } from "../hooks/useAuth";
 import { registerSchema } from "../validation/auth";
 import { zodIssuesToFieldErrors } from "../validation/campaign";
@@ -88,9 +89,7 @@ export default function RegisterPage() {
             <small className="muted">At least 8 characters.</small>
             {fieldErrors.password && <small className="error-msg">{fieldErrors.password}</small>}
           </label>
-          {register.isError && !Object.keys(fieldErrors).length && (
-            <p className="error-msg">{register.error.message}</p>
-          )}
+          {!Object.keys(fieldErrors).length && <ErrorAlert error={register.error} />}
           <button type="submit" className="button" disabled={register.isPending}>
             {register.isPending ? "Creating…" : "Create account"}
           </button>

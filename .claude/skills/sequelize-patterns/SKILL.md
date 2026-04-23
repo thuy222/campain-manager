@@ -26,10 +26,7 @@ import type { User } from "./user";
 
 export type CampaignStatus = "draft" | "scheduled" | "sending" | "sent";
 
-export class Campaign extends Model<
-  InferAttributes<Campaign>,
-  InferCreationAttributes<Campaign>
-> {
+export class Campaign extends Model<InferAttributes<Campaign>, InferCreationAttributes<Campaign>> {
   declare id: CreationOptional<string>;
   declare name: string;
   declare subject: string;
@@ -209,8 +206,7 @@ await sequelize.transaction(async (tx) => {
     "sending",
     tx,
   );
-  if (affected === 0)
-    throw new AppError("STATE_CONFLICT", "Cannot send in current state", 409);
+  if (affected === 0) throw new AppError("STATE_CONFLICT", "Cannot send in current state", 409);
   await campaignRecipientRepository.bulkMarkPending(id, tx);
 });
 ```
@@ -222,7 +218,7 @@ await sequelize.transaction(async (tx) => {
 ## 5. Migrations only — never `sequelize.sync`
 
 - `sequelize.sync()`, `sync({ force: true })`, `sync({ alter: true })` are **banned** in all code paths, including test setup. Tests use migrations too.
-- Schema lives in `packages/backend/migrations/YYYYMMDDHHMMSS-description.js`. Run `yarn workspace @campaign-manager/backend db:migrate`.
+- Schema lives in `packages/backend/migrations/YYYYMMDDHHMMSS-description.js`. Run `yarn db:migrate` from the repo root.
 - One migration per logical change. Don't edit a shipped migration — write a new one.
 - Every migration has `up` **and** `down`.
 

@@ -5,7 +5,7 @@ export const registerSchema = z.object({
     .string()
     .trim()
     .min(1, { message: "Email is required" })
-    .pipe(z.email({ message: "Must be a valid email address" })),
+    .email({ message: "Must be a valid email address" }),
   name: z
     .string()
     .trim()

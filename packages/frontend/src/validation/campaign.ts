@@ -6,7 +6,7 @@ const recipientEmail = z
   .string()
   .trim()
   .toLowerCase()
-  .pipe(z.email({ message: "Must be a valid email address" }));
+  .email({ message: "Must be a valid email address" });
 
 export const createCampaignSchema = z.object({
   name: z

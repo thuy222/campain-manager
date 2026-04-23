@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 
+import ErrorAlert from "../components/ErrorAlert";
 import { useLogin } from "../hooks/useAuth";
 
 export default function LoginPage() {
@@ -38,14 +39,8 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
             />
           </label>
-          {login.isError && (
-            <p className="error-msg">{login.error.message}</p>
-          )}
-          <button
-            type="submit"
-            className="button"
-            disabled={login.isPending}
-          >
+          <ErrorAlert error={login.error} />
+          <button type="submit" className="button" disabled={login.isPending}>
             {login.isPending ? "Signing in…" : "Sign in"}
           </button>
         </form>

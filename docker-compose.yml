@@ -28,6 +28,7 @@ services:
       CORS_ORIGIN: http://localhost:5173
       SIMULATED_FAILURE_RATE: "0.1"
       SIMULATED_OPEN_RATE: "0.4"
+      BCRYPT_COST: "12"
     ports:
       - "4000:4000"
     volumes:

@@ -19,6 +19,7 @@ CampaignRecipient.init(
       type: DataTypes.STRING(10),
       allowNull: false,
       defaultValue: "pending",
+      validate: { isIn: [["pending", "sent", "failed"]] },
     },
     sent_at: { type: DataTypes.DATE, allowNull: true },
     opened_at: { type: DataTypes.DATE, allowNull: true },

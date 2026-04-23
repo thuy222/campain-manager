@@ -3,11 +3,7 @@ import { Link } from "react-router-dom";
 import StatusBadge from "../components/StatusBadge";
 import { useCampaignsList } from "../hooks/useCampaigns";
 import { useAppDispatch, useAppSelector } from "../store";
-import {
-  setPage,
-  setStatusFilter,
-  type CampaignStatusFilter,
-} from "../store/campaignsUiSlice";
+import { setPage, setStatusFilter, type CampaignStatusFilter } from "../store/campaignsUiSlice";
 import type { CampaignStatus } from "../types/campaign";
 
 const FILTERS: CampaignStatusFilter[] = ["all", "draft", "scheduled", "sent"];
@@ -19,8 +15,7 @@ export default function CampaignsListPage() {
   const query = {
     page,
     limit,
-    status:
-      statusFilter === "all" ? undefined : (statusFilter as CampaignStatus),
+    status: statusFilter === "all" ? undefined : (statusFilter as CampaignStatus),
   };
 
   const { data, isLoading, isError, error } = useCampaignsList(query);
@@ -83,11 +78,7 @@ export default function CampaignsListPage() {
                     <StatusBadge status={c.status} />
                   </td>
                   <td>{c.recipient_count}</td>
-                  <td>
-                    {c.scheduled_at
-                      ? new Date(c.scheduled_at).toLocaleString()
-                      : "—"}
-                  </td>
+                  <td>{c.scheduled_at ? new Date(c.scheduled_at).toLocaleString() : "—"}</td>
                   <td>{new Date(c.created_at).toLocaleString()}</td>
                 </tr>
               ))}
@@ -99,7 +90,7 @@ export default function CampaignsListPage() {
               type="button"
               className="button button-muted"
               onClick={() => dispatch(setPage(page - 1))}
-              disabled={page <= 1}
+              disabled={page <= 1 || isLoading}
             >
               Prev
             </button>
@@ -110,7 +101,7 @@ export default function CampaignsListPage() {
               type="button"
               className="button button-muted"
               onClick={() => dispatch(setPage(page + 1))}
-              disabled={page >= totalPages}
+              disabled={page >= totalPages || isLoading}
             >
               Next
             </button>

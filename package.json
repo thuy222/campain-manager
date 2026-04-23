@@ -12,6 +12,10 @@
     "dev:frontend": "yarn workspace @campaign-manager/frontend dev",
     "build": "yarn workspaces run build",
     "start": "yarn workspace @campaign-manager/backend start",
+    "test": "yarn workspaces run test",
+    "db:migrate": "yarn workspace @campaign-manager/backend db:migrate",
+    "db:rollback": "yarn workspace @campaign-manager/backend db:rollback",
+    "db:seed": "yarn workspace @campaign-manager/backend db:seed",
     "clean": "rm -rf node_modules packages/*/node_modules packages/*/dist packages/*/build"
   },
   "devDependencies": {

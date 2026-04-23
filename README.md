@@ -48,18 +48,20 @@ cp packages/backend/.env.example packages/backend/.env
 # then edit packages/backend/.env — at minimum, set a real JWT_SECRET
 
 # 5. Run migrations and seed
-yarn workspace @campaign-manager/backend db:migrate
-yarn workspace @campaign-manager/backend db:seed
+yarn db:migrate
+yarn db:seed
 
 # 6. Run both dev servers
 yarn dev
 ```
 
+Useful root scripts: `yarn test` (runs both workspaces), `yarn db:migrate`, `yarn db:rollback`, `yarn db:seed`.
+
 Open `http://localhost:5173`.
 
 ## Default login
 
-Created by `yarn workspace @campaign-manager/backend db:seed`:
+Created by `yarn db:seed`:
 
 | Field    | Value              |
 | -------- | ------------------ |
@@ -135,6 +137,5 @@ The most valuable thing Claude Code gave me wasn't speed — it was **enforced c
 - Skills + `CLAUDE.md` forced me to _write down_ conventions instead of keeping them in my head. Onboarding a new contributor (or my future self) will be much easier as a result.
 - The spec-first workflow forced me to _think through edge cases upfront_ instead of discovering them via bugs. The resolved-question blocks at the bottom of each spec capture decisions that would otherwise get lost.
 - The habit of asking Claude to audit shipped code against the original assignment brief at checkpoints catches drift that neither code review nor tests can catch — specifically, "is the README still true?" and "does our shipped surface match what the assignment asked for?"
-
 
 See [`CLAUDE.md`](./CLAUDE.md) for the full contributor guide and [`__spec/auth.md`](./__spec/auth.md) for the auth feature spec.

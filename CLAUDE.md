@@ -10,7 +10,6 @@ Full-stack Mini Campaign Manager. Marketers create email campaigns, schedule the
    - `sequelize-patterns` — model/repo/migration/transaction/index/aggregation rules.
    - `api-response-shape` — envelopes, HTTP status matrix, error codes, `AppError`, `asyncHandler`, never-leak rules.
 
-
 ## Stack
 
 Monorepo — Yarn workspaces, two packages.
@@ -24,20 +23,21 @@ Postgres runs locally via Docker.
 
 Run from repo root.
 
-| Task | Command |
-| --- | --- |
-| Install | `yarn install` |
-| Dev (both) | `yarn dev` |
-| Dev backend only | `yarn dev:backend` |
-| Dev frontend only | `yarn dev:frontend` |
-| Backend tests | `yarn workspace @campaign-manager/backend test` |
-| Frontend tests | `yarn workspace @campaign-manager/frontend test` |
-| One backend test | `yarn workspace @campaign-manager/backend test -- <pattern>` |
-| Format (auto via hook) | `yarn prettier --write <path>` |
-| DB up | `docker compose up -d postgres` |
-| DB migrate / rollback | `yarn workspace @campaign-manager/backend db:migrate` / `db:rollback` |
-| psql | `psql postgresql://postgres:postgres@localhost:5432/campaign_manager` |
-
+| Task                        | Command                                                               |
+| --------------------------- | --------------------------------------------------------------------- |
+| Install                     | `yarn install`                                                        |
+| Dev (both)                  | `yarn dev`                                                            |
+| Dev backend only            | `yarn dev:backend`                                                    |
+| Dev frontend only           | `yarn dev:frontend`                                                   |
+| All tests (both workspaces) | `yarn test`                                                           |
+| Backend tests               | `yarn workspace @campaign-manager/backend test`                       |
+| Frontend tests              | `yarn workspace @campaign-manager/frontend test`                      |
+| One backend test            | `yarn workspace @campaign-manager/backend test -- <pattern>`          |
+| Format (auto via hook)      | `yarn prettier --write <path>`                                        |
+| DB up                       | `docker compose up -d postgres`                                       |
+| DB migrate / rollback       | `yarn db:migrate` / `yarn db:rollback`                                |
+| DB seed                     | `yarn db:seed`                                                        |
+| psql                        | `psql postgresql://postgres:postgres@localhost:5434/campaign_manager` |
 
 ## Project layering
 
@@ -45,7 +45,7 @@ Run from repo root.
 
 - **Controller** — parses `req`, calls service, shapes response. No business logic. **No Sequelize Model imports.**
 - **Service** — business rules, state transitions, orchestration, transactions. Throws `AppError`. No `req` / `res`.
-- **Repository** — the *only* layer that touches Sequelize Models. Returns plain objects, not Model instances. See `sequelize-patterns` skill.
+- **Repository** — the _only_ layer that touches Sequelize Models. Returns plain objects, not Model instances. See `sequelize-patterns` skill.
 
 DTOs are Zod schemas; use `z.infer` for the type. One schema per body/query/params.
 

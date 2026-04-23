@@ -24,35 +24,53 @@ class CampaignsRepository {
   }
 
   async findByOwner({ createdBy, status, limit, offset }, tx) {
-    const where = { created_by: createdBy };
-    if (status) where.status = status;
-    const { rows, count } = await Campaign.findAndCountAll({
-      where,
-      order: [["created_at", "DESC"]],
-      limit,
-      offset,
-      transaction: tx,
-    });
-    const items = rows.map((r) => r.get({ plain: true }));
-    const ids = items.map((r) => r.id);
-    const countsById = new Map();
-    if (ids.length > 0) {
-      const counts = await sequelize.query(
-        `SELECT campaign_id, COUNT(*)::int AS count
-           FROM campaign_recipients
-          WHERE campaign_id IN (:ids)
-          GROUP BY campaign_id`,
+    if (!isUuid(createdBy)) return { rows: [], count: 0 };
+    // Single roundtrip when the page has rows: a LEFT JOIN to pre-aggregated
+    // recipient counts, plus COUNT(*) OVER() for the total. Falls back to a
+    // standalone count query only for the empty-page edge (so a UI that
+    // paginates past the end still sees the correct total).
+    const rows = await sequelize.query(
+      `SELECT c.id, c.name, c.subject, c.body, c.status, c.scheduled_at,
+              c.created_by, c.created_at, c.updated_at,
+              COALESCE(rc.cnt, 0) AS recipient_count,
+              COUNT(*) OVER()     AS total_count
+         FROM campaigns c
+    LEFT JOIN (
+           SELECT campaign_id, COUNT(*)::int AS cnt
+             FROM campaign_recipients
+            GROUP BY campaign_id
+         ) rc ON rc.campaign_id = c.id
+        WHERE c.created_by = :createdBy
+          AND (:status::text IS NULL OR c.status = :status)
+        ORDER BY c.created_at DESC
+        LIMIT :limit OFFSET :offset`,
+      {
+        replacements: { createdBy, status: status ?? null, limit, offset },
+        type: QueryTypes.SELECT,
+        transaction: tx,
+      },
+    );
+
+    if (rows.length === 0) {
+      const [{ count }] = await sequelize.query(
+        `SELECT COUNT(*)::int AS count
+           FROM campaigns
+          WHERE created_by = :createdBy
+            AND (:status::text IS NULL OR status = :status)`,
         {
-          replacements: { ids },
+          replacements: { createdBy, status: status ?? null },
           type: QueryTypes.SELECT,
           transaction: tx,
         },
       );
-      for (const c of counts) countsById.set(c.campaign_id, c.count);
+      return { rows: [], count };
     }
-    for (const item of items) {
-      item.recipient_count = countsById.get(item.id) || 0;
-    }
+
+    const count = Number(rows[0].total_count);
+    const items = rows.map(({ total_count, recipient_count, ...r }) => ({
+      ...r,
+      recipient_count: Number(recipient_count),
+    }));
     return { rows: items, count };
   }
 

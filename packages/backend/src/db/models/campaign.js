@@ -17,6 +17,7 @@ Campaign.init(
       type: DataTypes.STRING(16),
       allowNull: false,
       defaultValue: "draft",
+      validate: { isIn: [["draft", "scheduled", "sent"]] },
     },
     scheduled_at: { type: DataTypes.DATE, allowNull: true },
     created_by: { type: DataTypes.UUID, allowNull: false },

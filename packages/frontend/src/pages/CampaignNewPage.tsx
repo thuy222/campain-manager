@@ -2,6 +2,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { ZodError } from "zod";
 
+import ErrorAlert from "../components/ErrorAlert";
 import { useCreateCampaign } from "../hooks/useCampaigns";
 import {
   MAX_RECIPIENTS,
@@ -23,14 +24,11 @@ function parseRecipients(raw: string): string[] {
   return out;
 }
 
-function resolveRecipientsError(
-  errors: Record<string, string>,
-): string | undefined {
+function resolveRecipientsError(errors: Record<string, string>): string | undefined {
   // Zod array-item errors arrive keyed like "recipients.0" (path joined by
   // `.`). Resolve "recipients" to include any nested item error.
   return (
-    errors.recipients ??
-    Object.entries(errors).find(([k]) => k.startsWith("recipients."))?.[1]
+    errors.recipients ?? Object.entries(errors).find(([k]) => k.startsWith("recipients."))?.[1]
   );
 }
 
@@ -44,10 +42,7 @@ export default function CampaignNewPage() {
   const [recipientsInput, setRecipientsInput] = useState("");
   const [clientErrors, setClientErrors] = useState<Record<string, string>>({});
 
-  const recipients = useMemo(
-    () => parseRecipients(recipientsInput),
-    [recipientsInput],
-  );
+  const recipients = useMemo(() => parseRecipients(recipientsInput), [recipientsInput]);
 
   // Client-side errors take precedence over server-side errors so the user
   // sees validation feedback the instant they hit submit without waiting for
@@ -56,10 +51,7 @@ export default function CampaignNewPage() {
   const fieldErrors = { ...serverErrors, ...clientErrors };
   const recipientsError = resolveRecipientsError(fieldErrors);
   const hasVisibleFieldError = Boolean(
-    fieldErrors.name ||
-      fieldErrors.subject ||
-      fieldErrors.body ||
-      recipientsError,
+    fieldErrors.name || fieldErrors.subject || fieldErrors.body || recipientsError,
   );
 
   const onSubmit = (e: FormEvent) => {
@@ -105,23 +97,17 @@ export default function CampaignNewPage() {
             onChange={(e) => onFieldChange(setName, "name")(e.target.value)}
             maxLength={255}
           />
-          {fieldErrors.name && (
-            <small className="error-msg">{fieldErrors.name}</small>
-          )}
+          {fieldErrors.name && <small className="error-msg">{fieldErrors.name}</small>}
         </label>
         <label className="field">
           <span>Subject</span>
           <input
             type="text"
             value={subject}
-            onChange={(e) =>
-              onFieldChange(setSubject, "subject")(e.target.value)
-            }
+            onChange={(e) => onFieldChange(setSubject, "subject")(e.target.value)}
             maxLength={255}
           />
-          {fieldErrors.subject && (
-            <small className="error-msg">{fieldErrors.subject}</small>
-          )}
+          {fieldErrors.subject && <small className="error-msg">{fieldErrors.subject}</small>}
         </label>
         <label className="field">
           <span>Body</span>
@@ -130,15 +116,10 @@ export default function CampaignNewPage() {
             value={body}
             onChange={(e) => onFieldChange(setBody, "body")(e.target.value)}
           />
-          {fieldErrors.body && (
-            <small className="error-msg">{fieldErrors.body}</small>
-          )}
+          {fieldErrors.body && <small className="error-msg">{fieldErrors.body}</small>}
         </label>
         <label className="field">
-          <span>
-            Recipients — one per line (normalized, deduped, max{" "}
-            {MAX_RECIPIENTS})
-          </span>
+          <span>Recipients — one per line (normalized, deduped, max {MAX_RECIPIENTS})</span>
           <textarea
             rows={6}
             value={recipientsInput}
@@ -159,17 +140,12 @@ export default function CampaignNewPage() {
           />
           <small className="muted">
             {recipients.length} unique email{recipients.length === 1 ? "" : "s"}
-            {recipients.length > MAX_RECIPIENTS &&
-              ` (exceeds ${MAX_RECIPIENTS})`}
+            {recipients.length > MAX_RECIPIENTS && ` (exceeds ${MAX_RECIPIENTS})`}
           </small>
-          {recipientsError && (
-            <small className="error-msg">{recipientsError}</small>
-          )}
+          {recipientsError && <small className="error-msg">{recipientsError}</small>}
         </label>
 
-        {create.isError && !hasVisibleFieldError && (
-          <p className="error-msg">{create.error.message}</p>
-        )}
+        {!hasVisibleFieldError && <ErrorAlert error={create.error} />}
 
         <div className="action-row">
           <button

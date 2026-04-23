@@ -1,8 +1,4 @@
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   createCampaign,
@@ -25,13 +21,28 @@ import type {
   UpdateCampaignInput,
 } from "../types/campaign";
 
-const LIST_KEY = ["campaigns"] as const;
-const detailKey = (id: string) => ["campaigns", id] as const;
-const statsKey = (id: string) => ["campaigns", id, "stats"] as const;
+// Centralised key factory. Normalises the list query so callers can pass
+// fields in any order / leave them undefined without creating duplicate
+// cache entries.
+export const campaignKeys = {
+  all: ["campaigns"] as const,
+  lists: () => [...campaignKeys.all, "list"] as const,
+  list: (q: ListCampaignsQuery) =>
+    [
+      ...campaignKeys.lists(),
+      {
+        page: q.page ?? 1,
+        limit: q.limit ?? 20,
+        status: q.status ?? null,
+      },
+    ] as const,
+  detail: (id: string) => [...campaignKeys.all, "detail", id] as const,
+  stats: (id: string) => [...campaignKeys.all, "detail", id, "stats"] as const,
+};
 
 export function useCampaignsList(query: ListCampaignsQuery) {
   return useQuery<{ items: Campaign[]; meta: ListMeta }, ApiError>({
-    queryKey: [...LIST_KEY, query],
+    queryKey: campaignKeys.list(query),
     queryFn: () => listCampaigns(query),
     placeholderData: (prev) => prev,
   });
@@ -39,7 +50,7 @@ export function useCampaignsList(query: ListCampaignsQuery) {
 
 export function useCampaignDetail(id: string) {
   return useQuery<Campaign, ApiError>({
-    queryKey: detailKey(id),
+    queryKey: campaignKeys.detail(id),
     queryFn: () => getCampaign(id),
     enabled: Boolean(id),
   });
@@ -47,14 +58,14 @@ export function useCampaignDetail(id: string) {
 
 export function useCampaignStats(id: string) {
   return useQuery<CampaignStats, ApiError>({
-    queryKey: statsKey(id),
+    queryKey: campaignKeys.stats(id),
     queryFn: () => getCampaignStats(id),
     enabled: Boolean(id),
   });
 }
 
 function invalidateLists(qc: ReturnType<typeof useQueryClient>) {
-  qc.invalidateQueries({ queryKey: LIST_KEY });
+  qc.invalidateQueries({ queryKey: campaignKeys.lists() });
 }
 
 export function useCreateCampaign() {
@@ -70,7 +81,7 @@ export function useUpdateCampaign(id: string) {
   return useMutation<Campaign, ApiError, UpdateCampaignInput>({
     mutationFn: (patch) => updateCampaign(id, patch),
     onSuccess: (campaign) => {
-      qc.setQueryData(detailKey(id), campaign);
+      qc.setQueryData(campaignKeys.detail(id), campaign);
       invalidateLists(qc);
     },
   });
@@ -81,8 +92,8 @@ export function useDeleteCampaign(id: string) {
   return useMutation<void, ApiError, void>({
     mutationFn: () => deleteCampaign(id),
     onSuccess: () => {
-      qc.removeQueries({ queryKey: detailKey(id) });
-      qc.removeQueries({ queryKey: statsKey(id) });
+      qc.removeQueries({ queryKey: campaignKeys.detail(id) });
+      qc.removeQueries({ queryKey: campaignKeys.stats(id) });
       invalidateLists(qc);
     },
   });
@@ -93,7 +104,7 @@ export function useScheduleCampaign(id: string) {
   return useMutation<Campaign, ApiError, ScheduleCampaignInput>({
     mutationFn: (input) => scheduleCampaign(id, input),
     onSuccess: (campaign) => {
-      qc.setQueryData(detailKey(id), campaign);
+      qc.setQueryData(campaignKeys.detail(id), campaign);
       invalidateLists(qc);
     },
   });
@@ -104,8 +115,8 @@ export function useSendCampaign(id: string) {
   return useMutation<Campaign, ApiError, void>({
     mutationFn: () => sendCampaign(id),
     onSuccess: (campaign) => {
-      qc.setQueryData(detailKey(id), campaign);
-      qc.invalidateQueries({ queryKey: statsKey(id) });
+      qc.setQueryData(campaignKeys.detail(id), campaign);
+      qc.invalidateQueries({ queryKey: campaignKeys.stats(id) });
       invalidateLists(qc);
     },
   });

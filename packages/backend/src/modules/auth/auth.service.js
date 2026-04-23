@@ -3,7 +3,7 @@ const { UniqueConstraintError } = require("sequelize");
 const AppError = require("../../lib/AppError");
 const { ErrorCode } = require("../../lib/errorCodes");
 
-const BCRYPT_COST = 10;
+const BCRYPT_COST = Number.parseInt(process.env.BCRYPT_COST || "12", 10);
 
 // Structurally-valid bcrypt hash of an unguessable throwaway value. Used as a
 // stand-in when a login targets a non-existent user so the bcrypt.compare path
