@@ -1,0 +1,15 @@
+node_modules
+packages/*/node_modules
+.git
+.gitignore
+.env
+packages/*/.env
+packages/*/dist
+packages/*/build
+packages/frontend/tsconfig.tsbuildinfo
+packages/frontend/tsconfig.node.tsbuildinfo
+.claude
+__prompts
+Dockerfile*
+docker-compose*.yml
+.dockerignore

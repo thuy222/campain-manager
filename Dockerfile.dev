@@ -1,0 +1,11 @@
+FROM node:20-alpine
+
+RUN apk add --no-cache bash
+
+WORKDIR /app
+
+COPY package.json yarn.lock ./
+COPY packages/backend/package.json ./packages/backend/package.json
+COPY packages/frontend/package.json ./packages/frontend/package.json
+
+RUN yarn install --frozen-lockfile --non-interactive

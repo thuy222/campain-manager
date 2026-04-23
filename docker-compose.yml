@@ -15,5 +15,51 @@ services:
       timeout: 3s
       retries: 10
 
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    environment:
+      NODE_ENV: development
+      PORT: "4000"
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/campaign_manager
+      DATABASE_URL_TEST: postgresql://postgres:postgres@postgres:5432/campaign_manager_test
+      JWT_SECRET: dev-secret-change-me
+      CORS_ORIGIN: http://localhost:5173
+      SIMULATED_FAILURE_RATE: "0.1"
+      SIMULATED_OPEN_RATE: "0.4"
+    ports:
+      - "4000:4000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/packages/backend/node_modules
+      - /app/packages/frontend/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c "
+      yarn workspace @campaign-manager/backend db:migrate &&
+      yarn workspace @campaign-manager/backend db:seed &&
+      yarn workspace @campaign-manager/backend dev"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    environment:
+      VITE_API_PROXY_TARGET: http://backend:4000
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/packages/backend/node_modules
+      - /app/packages/frontend/node_modules
+    depends_on:
+      - backend
+    command: sh -c "yarn workspace @campaign-manager/frontend dev --host 0.0.0.0"
+
 volumes:
   pgdata:
