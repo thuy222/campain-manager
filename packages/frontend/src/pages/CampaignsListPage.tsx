@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 
+import { SkeletonTable } from "../components/Skeleton";
 import StatusBadge from "../components/StatusBadge";
 import { useCampaignsList } from "../hooks/useCampaigns";
 import { useAppDispatch, useAppSelector } from "../store";
@@ -44,7 +45,7 @@ export default function CampaignsListPage() {
         ))}
       </div>
 
-      {isLoading && <p>Loading…</p>}
+      {isLoading && <SkeletonTable rows={5} columns={5} />}
       {isError && <p className="error-msg">Failed to load: {error.message}</p>}
 
       {data && data.items.length === 0 && (

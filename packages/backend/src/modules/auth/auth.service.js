@@ -1,5 +1,4 @@
 const bcrypt = require("bcrypt");
-const { UniqueConstraintError } = require("sequelize");
 const AppError = require("../../lib/AppError");
 const { ErrorCode } = require("../../lib/errorCodes");
 
@@ -30,21 +29,8 @@ class AuthService {
 
   async register({ email, name, password }) {
     const passwordHash = await bcrypt.hash(password, BCRYPT_COST);
-    try {
-      const row = await this.repository.create({
-        email,
-        name,
-        passwordHash,
-      });
-      return this.toPublicUser(row);
-    } catch (err) {
-      if (err instanceof UniqueConstraintError) {
-        throw new AppError(ErrorCode.VALIDATION_ERROR, "Email already registered", 422, {
-          email: "already registered",
-        });
-      }
-      throw err;
-    }
+    const row = await this.repository.create({ email, name, passwordHash });
+    return this.toPublicUser(row);
   }
 
   async login({ email, password }) {

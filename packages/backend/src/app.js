@@ -2,6 +2,7 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
 const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
 
@@ -19,6 +20,10 @@ if (corsOrigin === "*") {
   );
 }
 
+// Helmet's default Cross-Origin-Resource-Policy=same-origin would block the
+// Vite frontend (different origin) from reading API responses. Relax to
+// cross-origin — CORS + credentials still gate who can call us.
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(
   cors({
     origin: corsOrigin,

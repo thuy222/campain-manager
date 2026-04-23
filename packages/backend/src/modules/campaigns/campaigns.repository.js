@@ -23,6 +23,31 @@ class CampaignsRepository {
     return row ? row.get({ plain: true }) : null;
   }
 
+  async findByIdWithRecipientCount(id, createdBy, tx) {
+    if (!isUuid(id) || !isUuid(createdBy)) return null;
+    const [row] = await sequelize.query(
+      `SELECT c.id, c.name, c.subject, c.body, c.status, c.scheduled_at,
+              c.created_by, c.created_at, c.updated_at,
+              COALESCE(rc.cnt, 0) AS recipient_count
+         FROM campaigns c
+    LEFT JOIN (
+           SELECT campaign_id, COUNT(*)::int AS cnt
+             FROM campaign_recipients
+            WHERE campaign_id = :id
+            GROUP BY campaign_id
+         ) rc ON rc.campaign_id = c.id
+        WHERE c.id = :id
+          AND c.created_by = :createdBy`,
+      {
+        replacements: { id, createdBy },
+        type: QueryTypes.SELECT,
+        transaction: tx,
+      },
+    );
+    if (!row) return null;
+    return { ...row, recipient_count: Number(row.recipient_count) };
+  }
+
   async findByOwner({ createdBy, status, limit, offset }, tx) {
     if (!isUuid(createdBy)) return { rows: [], count: 0 };
     // Single roundtrip when the page has rows: a LEFT JOIN to pre-aggregated

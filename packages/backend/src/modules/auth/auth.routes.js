@@ -1,4 +1,5 @@
 const express = require("express");
+const rateLimit = require("express-rate-limit");
 
 const validate = require("../../middleware/validate");
 const buildRequireAuth = require("../../middleware/requireAuth");
@@ -14,10 +15,26 @@ const service = new AuthService(repository);
 const controller = new AuthController(service);
 const requireAuth = buildRequireAuth(repository);
 
+// Slow down credential-stuffing + enumeration against unauthenticated endpoints.
+// Disabled in tests so integration suites can exercise these routes freely.
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === "test",
+  message: {
+    error: {
+      code: "RATE_LIMITED",
+      message: "Too many attempts, try again later.",
+    },
+  },
+});
+
 const router = express.Router();
 
-router.post("/register", validate({ body: registerSchema }), controller.register);
-router.post("/login", validate({ body: loginSchema }), controller.login);
+router.post("/register", authLimiter, validate({ body: registerSchema }), controller.register);
+router.post("/login", authLimiter, validate({ body: loginSchema }), controller.login);
 router.post("/logout", controller.logout);
 router.get("/me", requireAuth, controller.me);
 router.post("/refresh", requireAuth, controller.refresh);

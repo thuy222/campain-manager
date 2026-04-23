@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import ActionButtons from "../components/ActionButtons";
 import ErrorAlert from "../components/ErrorAlert";
+import { SkeletonDetail, SkeletonStats } from "../components/Skeleton";
 import StatsPanel from "../components/StatsPanel";
 import StatusBadge from "../components/StatusBadge";
 import EditCampaignForm from "../components/campaign-detail/EditCampaignForm";
@@ -29,7 +30,13 @@ export default function CampaignDetailPage() {
 
   const [mode, setMode] = useState<"view" | "edit" | "schedule">("view");
 
-  if (detail.isLoading) return <p>Loading…</p>;
+  if (detail.isLoading) {
+    return (
+      <section>
+        <SkeletonDetail />
+      </section>
+    );
+  }
   if (detail.isError || !detail.data) {
     return (
       <section>
@@ -106,7 +113,7 @@ export default function CampaignDetailPage() {
           </dl>
 
           <h2>Stats</h2>
-          {stats.isLoading && <p>Loading stats…</p>}
+          {stats.isLoading && <SkeletonStats />}
           {stats.data && <StatsPanel stats={stats.data} />}
           {stats.isError && (
             <p className="error-msg">Failed to load stats: {stats.error.message}</p>

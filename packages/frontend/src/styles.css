@@ -344,3 +344,43 @@ th {
   background: #2563eb;
   transition: width 0.2s ease-out;
 }
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.skeleton {
+  display: inline-block;
+  background: #e5e7eb;
+  background-image: linear-gradient(90deg, #e5e7eb 0, #f3f4f6 40px, #e5e7eb 80px);
+  background-size: 200px 100%;
+  background-repeat: no-repeat;
+  border-radius: 4px;
+  animation: skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+.skeleton-text {
+  height: 0.9rem;
+  width: 80%;
+}
+
+.skeleton-text-sm {
+  height: 0.7rem;
+  width: 50%;
+}
+
+.skeleton-text-lg {
+  height: 1.4rem;
+  width: 60%;
+}
+
+.skeleton-bar {
+  height: 28px;
+  width: 100%;
+  border-radius: 6px;
+}

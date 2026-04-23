@@ -1,6 +1,5 @@
 const { z } = require("zod");
-
-const MAX_RECIPIENTS = 100;
+const { MAX_RECIPIENTS } = require("../constants");
 
 const recipientEmailSchema = z
   .string({ required_error: "Recipient email is required" })
@@ -32,5 +31,4 @@ const createCampaignSchema = z.object({
 module.exports = {
   createCampaignSchema,
   recipientsArraySchema,
-  MAX_RECIPIENTS,
 };
